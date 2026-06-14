@@ -34,7 +34,7 @@ Edit `.env`:
 ```env
 CLIENT_ID=<your Spotify app client ID>
 CLIENT_SECRET=<your Spotify app client secret>
-REDIRECT_URI=http://localhost:8888/callback
+REDIRECT_URI=http://127.0.0.1:8888/callback
 MCP_SHARED_SECRET=<generate a long random string, e.g. openssl rand -hex 32>
 PORT=3000
 ```

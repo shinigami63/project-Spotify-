@@ -4,7 +4,7 @@ import { buildAuthUrl, exchangeCode } from "../src/spotify/auth.js";
 
 const CLIENT_ID = process.env.CLIENT_ID;
 const CLIENT_SECRET = process.env.CLIENT_SECRET;
-const REDIRECT_URI = process.env.REDIRECT_URI ?? "http://localhost:8888/callback";
+const REDIRECT_URI = process.env.REDIRECT_URI ?? "http://127.0.0.1:8888/callback";
 
 if (!CLIENT_ID || !CLIENT_SECRET) {
   console.error("Set CLIENT_ID and CLIENT_SECRET in .env");
@@ -59,4 +59,4 @@ const server = createServer(async (req, res) => {
   }
 });
 
-server.listen(8888, "localhost");
+server.listen(8888, "127.0.0.1");
