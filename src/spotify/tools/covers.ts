@@ -1,0 +1,178 @@
+import { z } from "zod";
+import { spotifyPutRaw, spotifyPost, spotifyGet } from "../client.js";
+import {
+  resizeToUploadReady,
+  fetchBuffer,
+  generateTextCover as doGenerateTextCover,
+} from "../../image.js";
+
+// Standalone helper — avoids circular references inside the tools array
+async function uploadCover(
+  playlist_id: string,
+  image_url?: string,
+  image_base64?: string
+): Promise<{ success: boolean; playlist_id: string }> {
+  if (!image_url && !image_base64) {
+    throw new Error("Provide either image_url or image_base64");
+  }
+
+  let buf: Buffer;
+  if (image_url) {
+    buf = await fetchBuffer(image_url);
+  } else {
+    buf = Buffer.from(image_base64!, "base64");
+  }
+
+  const b64 = await resizeToUploadReady(buf);
+
+  if (Buffer.byteLength(b64, "utf8") > 256 * 1024) {
+    throw new Error("Image could not be compressed to ≤ 256 KB");
+  }
+
+  await spotifyPutRaw(`/playlists/${playlist_id}/images`, b64, "image/jpeg");
+  return { success: true, playlist_id };
+}
+
+export const coverTools = [
+  {
+    name: "preview_cover_resize",
+    description:
+      "Process an image to the upload-ready JPEG format and return it as base64 WITHOUT uploading. Always preview before upload_playlist_cover since cover changes are irreversible.",
+    inputSchema: z.object({
+      image_url: z.string().url().optional().describe("Public URL of the image"),
+      image_base64: z
+        .string()
+        .optional()
+        .describe("Base64-encoded image data (any format)"),
+    }),
+    async handler(input: { image_url?: string; image_base64?: string }) {
+      if (!input.image_url && !input.image_base64) {
+        throw new Error("Provide either image_url or image_base64");
+      }
+
+      let buf: Buffer;
+      if (input.image_url) {
+        buf = await fetchBuffer(input.image_url);
+      } else {
+        buf = Buffer.from(input.image_base64!, "base64");
+      }
+
+      const b64 = await resizeToUploadReady(buf);
+      return {
+        base64_jpeg: b64,
+        size_bytes: Buffer.byteLength(b64, "utf8"),
+        size_kb: Math.round(Buffer.byteLength(b64, "utf8") / 1024),
+        ready_to_upload: true,
+      };
+    },
+  },
+
+  {
+    name: "upload_playlist_cover",
+    description:
+      "Upload a JPEG cover image to a Spotify playlist. Destructive — no undo. Use preview_cover_resize first.",
+    inputSchema: z.object({
+      playlist_id: z.string(),
+      image_url: z.string().url().optional(),
+      image_base64: z.string().optional(),
+    }),
+    async handler(input: {
+      playlist_id: string;
+      image_url?: string;
+      image_base64?: string;
+    }) {
+      return uploadCover(input.playlist_id, input.image_url, input.image_base64);
+    },
+  },
+
+  {
+    name: "generate_text_cover",
+    description:
+      "Composite a playlist title over a background image and return the processed JPEG as base64",
+    inputSchema: z.object({
+      title: z.string().describe("Text to composite over the image"),
+      background_url: z
+        .string()
+        .url()
+        .describe("Public URL of the background image"),
+      style: z
+        .enum(["default", "bold", "minimal"])
+        .default("default")
+        .describe("Text style preset"),
+    }),
+    async handler(input: {
+      title: string;
+      background_url: string;
+      style: "default" | "bold" | "minimal";
+    }) {
+      const b64 = await doGenerateTextCover(
+        input.title,
+        input.background_url,
+        input.style
+      );
+      return {
+        base64_jpeg: b64,
+        size_bytes: Buffer.byteLength(b64, "utf8"),
+        size_kb: Math.round(Buffer.byteLength(b64, "utf8") / 1024),
+      };
+    },
+  },
+
+  {
+    name: "create_playlist_with_cover",
+    description:
+      "Create a playlist, add tracks, and set a cover image in a single call",
+    inputSchema: z.object({
+      name: z.string(),
+      description: z.string().optional(),
+      public: z.boolean().default(false),
+      track_uris: z
+        .array(z.string())
+        .optional()
+        .describe("Spotify track URIs to add"),
+      image_url: z.string().url().optional(),
+      image_base64: z.string().optional(),
+    }),
+    async handler(input: {
+      name: string;
+      description?: string;
+      public: boolean;
+      track_uris?: string[];
+      image_url?: string;
+      image_base64?: string;
+    }) {
+      // 1. Create playlist
+      const me = await spotifyGet<{ id: string }>("/me");
+      const playlist = await spotifyPost<{ id: string; name: string; snapshot_id: string }>(
+        `/users/${me.id}/playlists`,
+        {
+          name: input.name,
+          description: input.description,
+          public: input.public,
+          collaborative: false,
+        }
+      );
+
+      // 2. Add tracks
+      if (input.track_uris && input.track_uris.length > 0) {
+        await spotifyPost(`/playlists/${playlist.id}/tracks`, {
+          uris: input.track_uris,
+        });
+      }
+
+      // 3. Upload cover
+      let coverUploaded = false;
+      if (input.image_url || input.image_base64) {
+        await uploadCover(playlist.id, input.image_url, input.image_base64);
+        coverUploaded = true;
+      }
+
+      return {
+        id: playlist.id,
+        name: playlist.name,
+        tracks_added: input.track_uris?.length ?? 0,
+        cover_uploaded: coverUploaded,
+      };
+    },
+  },
+];
