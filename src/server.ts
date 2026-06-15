@@ -92,12 +92,11 @@ const AUTH_HTML = (redirectUri: string, state: string, challenge: string, method
 </html>`;
 
 app.get("/authorize", (c) => {
-  const q = c.req.query;
   return c.html(AUTH_HTML(
-    q("redirect_uri") ?? "",
-    q("state") ?? "",
-    q("code_challenge") ?? "",
-    q("code_challenge_method") ?? "",
+    c.req.query("redirect_uri") ?? "",
+    c.req.query("state") ?? "",
+    c.req.query("code_challenge") ?? "",
+    c.req.query("code_challenge_method") ?? "",
   ));
 });
 
