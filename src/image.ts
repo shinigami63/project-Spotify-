@@ -98,7 +98,7 @@ export async function generateTextCover(
 
   const lineHeight = fontSize * 1.3;
   const totalHeight = lines.length * lineHeight;
-  const startY = 320 - totalHeight / 2 + fontSize / 2;
+  const startY = Math.max(fontSize, 320 - totalHeight / 2 + fontSize / 2);
 
   const textElements = lines
     .map((line, i) => {

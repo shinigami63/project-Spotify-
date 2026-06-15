@@ -2,7 +2,6 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { playlistTools } from "./spotify/tools/playlists.js";
 import { coverTools } from "./spotify/tools/covers.js";
-import { catalogTools } from "./spotify/tools/catalog.js";
 import { libraryTools } from "./spotify/tools/library.js";
 import { playerTools } from "./spotify/tools/player.js";
 import { userTools } from "./spotify/tools/user.js";
@@ -24,7 +23,7 @@ function registerTools(server: McpServer, tools: ToolDef[]) {
         try {
           const result = await tool.handler(input);
           return {
-            content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }],
+            content: [{ type: "text" as const, text: JSON.stringify(result) }],
           };
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
@@ -47,7 +46,6 @@ export function createMcpServer(): McpServer {
   const allTools = [
     ...playlistTools,
     ...coverTools,
-    ...catalogTools,
     ...libraryTools,
     ...playerTools,
     ...userTools,
