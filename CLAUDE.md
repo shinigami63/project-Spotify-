@@ -32,6 +32,52 @@ A remote HTTP MCP server that fills the gaps in Spotify's official Claude.ai con
 | "Follow this artist" | `follow_artists_or_users` |
 | "What are my top tracks this month?" | `get_top_tracks` |
 
+## How to use both connectors together
+
+Both connectors work on the same Spotify account at the same time.
+Think of them as two specialists — give each task to the right one.
+
+### Use the OFFICIAL Spotify connector for:
+> Anything that involves **deciding what music to play or creating a playlist from scratch**
+
+- "Make me a playlist of rainy day lo-fi tracks"
+- "Find me 10 songs similar to Radiohead"
+- "Create a workout playlist with high-energy hits"
+- "Add some jazz to my study playlist"
+- "Recommend albums based on my taste"
+
+The official connector understands music taste, genre, mood, and context.
+It uses Spotify's catalog knowledge to curate. Let it do the thinking.
+
+### Use YOUR custom connector (cl spoty) for:
+> Anything that involves **controlling, editing, or managing** what already exists
+
+- **Covers:** "Set this image as the cover for my playlist"
+- **Playback:** "Pause", "skip", "volume to 50%", "play on my laptop"
+- **Editing:** "Rename this playlist", "make it private", "move track 2 to the top"
+- **Library:** "Save this album", "follow this artist", "unlike these tracks"
+- **Info:** "What's playing?", "what are my top tracks this month?", "show my devices"
+- **Queue:** "Add this to my queue"
+- **Backup:** "Export this playlist to JSON"
+
+### The ideal combined workflow (example)
+
+> **You:** "Create a playlist of 2000s indie rock classics, then set this photo as the cover"
+
+1. Claude uses the **official connector** → creates the playlist, finds the tracks, adds them
+2. Claude uses **your connector** → uploads the cover image
+3. Done — one sentence, two connectors, zero manual work
+
+> **You:** "Make me a chill playlist for tonight, make it private, and put my city photo as the cover"
+
+1. Official → curates and creates the playlist
+2. Yours → `change_playlist_details` (make private) + `upload_playlist_cover` (set photo)
+
+### Quick decision rule
+- **"Make / find / suggest / recommend"** → official connector
+- **"Set / change / save / follow / pause / skip / rename / upload / move"** → your connector
+- **Mixed requests** → Claude figures out which tools to use automatically, just describe what you want
+
 ## Key design decisions
 - Cover upload is the headline feature — no other AI assistant can set custom Spotify covers
 - OAuth flow built in so Claude.ai connector works without manual header setup
