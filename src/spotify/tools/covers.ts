@@ -4,6 +4,7 @@ import { spotifyPutRaw, spotifyPost, spotifyGet } from "../client.js";
 import {
   resizeToUploadReady,
   fetchBuffer,
+  generateAiImage,
   generateTextCover as doGenerateTextCover,
 } from "../../image.js";
 
@@ -77,6 +78,38 @@ export const coverTools = [
         size_kb: Math.round(Buffer.byteLength(b64, "utf8") / 1024),
         ready_to_upload: true,
       };
+    },
+  },
+
+  {
+    name: "set_ai_cover",
+    description:
+      "Generate a playlist cover from a text prompt (entirely server-side) and upload it — the whole A-Z in one call, no image hosting or file handling needed. Destructive: replaces the existing cover. Set preview_only=true to review via cover_id before uploading.",
+    inputSchema: z.object({
+      playlist_id: z.string(),
+      prompt: z.string().describe("Describe the cover art to generate"),
+      preview_only: z
+        .boolean()
+        .default(false)
+        .describe("Generate but don't upload; returns a cover_id to upload later"),
+    }),
+    async handler(input: {
+      playlist_id: string;
+      prompt: string;
+      preview_only: boolean;
+    }) {
+      const buf = await generateAiImage(input.prompt);
+      const b64 = await resizeToUploadReady(buf);
+      const cover_id = stashCover(b64);
+      if (input.preview_only) {
+        return {
+          cover_id,
+          size_kb: Math.round(Buffer.byteLength(b64, "utf8") / 1024),
+          uploaded: false,
+        };
+      }
+      await uploadCover(input.playlist_id, undefined, undefined, cover_id);
+      return { success: true, playlist_id: input.playlist_id, uploaded: true };
     },
   },
 
