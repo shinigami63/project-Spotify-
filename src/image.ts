@@ -30,13 +30,19 @@ export async function resizeToUploadReady(input: Buffer): Promise<string> {
 
 // Generate cover art server-side from a text prompt. Returns raw image bytes.
 // Keeps everything on the server — no file ever has to leave the client or be
-// hosted. ponytail: OpenAI images; swap this one fn for another provider if needed.
+// hosted. Free + keyless via Pollinations by default; uses OpenAI only if a key
+// is set. ponytail: two providers, both one fetch — swap/extend here if needed.
+// Pollinations URL — prompt must be encoded so spaces/&/etc. don't break it.
+export function pollinationsUrl(prompt: string): string {
+  return `https://image.pollinations.ai/prompt/${encodeURIComponent(
+    prompt
+  )}?width=1024&height=1024&nologo=true`;
+}
+
 export async function generateAiImage(prompt: string): Promise<Buffer> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
-    throw new Error(
-      "OPENAI_API_KEY not set — add it to the connector env to enable AI cover generation"
-    );
+    return fetchBuffer(pollinationsUrl(prompt)); // free, no account, no key
   }
   const res = await fetch("https://api.openai.com/v1/images/generations", {
     method: "POST",
