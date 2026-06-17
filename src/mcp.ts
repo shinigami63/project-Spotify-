@@ -1,5 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
+import { catalogTools } from "./spotify/tools/catalog.js";
 import { playlistTools } from "./spotify/tools/playlists.js";
 import { coverTools } from "./spotify/tools/covers.js";
 import { libraryTools } from "./spotify/tools/library.js";
@@ -44,6 +45,7 @@ export function createMcpServer(): McpServer {
   });
 
   const allTools = [
+    ...catalogTools,
     ...playlistTools,
     ...coverTools,
     ...libraryTools,
