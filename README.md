@@ -76,7 +76,7 @@ GET http://localhost:3000/health  → {"status":"ok"}
 | `REDIRECT_URI` | `http://localhost:8888/callback` (only needed for initial auth script) |
 | `SPOTIFY_REFRESH_TOKEN` | Obtained from `scripts/auth.ts` |
 | `MCP_SHARED_SECRET` | Same long secret you generated locally |
-| `OPENAI_API_KEY` | Optional — enables `set_ai_cover` (server-side AI cover generation) |
+| `OPENAI_API_KEY` | Optional — upgrades `set_ai_cover` to gpt-image-1 (paid). Omit for free Pollinations generation |
 | `PORT` | `3000` (or leave unset — Manufact will inject `PORT`) |
 
 ### Start command
@@ -121,7 +121,7 @@ After deploy, Manufact will give you a public HTTPS URL, e.g. `https://your-serv
 | `reorder_items` | Move items within a playlist |
 | `replace_items` | Overwrite entire playlist track list |
 | `get_playlist_cover` | Get current cover image URL |
-| `set_ai_cover` | Generate a cover from a text prompt server-side and upload it — full A-Z in one call (needs `OPENAI_API_KEY`) |
+| `set_ai_cover` | Generate a cover from a text prompt server-side and upload it — full A-Z in one call (free via Pollinations; optional `OPENAI_API_KEY` for gpt-image-1) |
 | `preview_cover_resize` | Resize image to upload spec, return a `cover_id` — no upload |
 | `upload_playlist_cover` | Upload JPEG cover (destructive — preview first) |
 | `generate_text_cover` | Composite title text over background image |

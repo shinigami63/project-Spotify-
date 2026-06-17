@@ -1,9 +1,10 @@
 import assert from "node:assert";
-import { generateAiImage } from "../src/image.js";
+import { pollinationsUrl } from "../src/image.js";
 
-// ponytail: checks only the no-key guard — the smallest thing that breaks if
-// the env wiring regresses, without spending a real API call.
+// ponytail: checks the free-provider URL encodes the prompt (spaces/& would
+// otherwise break the request). The money path; no network call needed.
 // Run: npm run build && node dist/scripts/ai-cover.test.js
-delete process.env.OPENAI_API_KEY;
-await assert.rejects(generateAiImage("test"), /OPENAI_API_KEY not set/);
-console.log("ok: set_ai_cover refuses without OPENAI_API_KEY");
+const url = pollinationsUrl("dark gothic & moody cover");
+assert.ok(!/ /.test(new URL(url).pathname), "prompt must be URL-encoded");
+assert.ok(url.includes("dark%20gothic"), "prompt must appear encoded in URL");
+console.log("ok: set_ai_cover builds a valid free-provider URL");
