@@ -28,6 +28,38 @@ export async function resizeToUploadReady(input: Buffer): Promise<string> {
   }
 }
 
+// Generate cover art server-side from a text prompt. Returns raw image bytes.
+// Keeps everything on the server — no file ever has to leave the client or be
+// hosted. ponytail: OpenAI images; swap this one fn for another provider if needed.
+export async function generateAiImage(prompt: string): Promise<Buffer> {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) {
+    throw new Error(
+      "OPENAI_API_KEY not set — add it to the connector env to enable AI cover generation"
+    );
+  }
+  const res = await fetch("https://api.openai.com/v1/images/generations", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({ model: "gpt-image-1", prompt, size: "1024x1024", n: 1 }),
+  });
+  if (!res.ok) {
+    throw new Error(
+      `Image generation failed ${res.status}: ${(await res.text()).slice(0, 300)}`
+    );
+  }
+  const data = (await res.json()) as {
+    data?: Array<{ b64_json?: string; url?: string }>;
+  };
+  const item = data.data?.[0];
+  if (item?.b64_json) return Buffer.from(item.b64_json, "base64");
+  if (item?.url) return fetchBuffer(item.url); // dall-e fallback
+  throw new Error("Image generation returned no image data");
+}
+
 export async function fetchBuffer(url: string): Promise<Buffer> {
   const res = await fetch(url);
   if (!res.ok) {
