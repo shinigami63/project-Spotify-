@@ -20,6 +20,75 @@ function originOf(req: Request): string {
   return `${u.protocol}//${u.host}`;
 }
 
+// ── Temp image store ─────────────────────────────────────────────────────────
+
+const tempImages = new Map<string, { data: Buffer; mime: string; expiresAt: number }>();
+setInterval(() => {
+  const now = Date.now();
+  for (const [id, img] of tempImages) if (img.expiresAt < now) tempImages.delete(id);
+}, 5 * 60 * 1000);
+
+const UPLOAD_HTML = (url = "", error = "") => `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Upload Cover Image</title>
+  <style>
+    *{box-sizing:border-box}
+    body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#191414;color:#fff;
+         display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0}
+    .card{background:#282828;border-radius:8px;padding:40px;max-width:420px;width:100%;margin:16px}
+    h2{margin:0 0 6px;font-size:22px}
+    p{color:#b3b3b3;margin:0 0 20px;font-size:14px}
+    input[type=file]{width:100%;padding:10px;background:#3e3e3e;border:1px solid #555;
+      border-radius:4px;color:#fff;font-size:14px}
+    button{width:100%;margin-top:12px;padding:12px;background:#1DB954;border:none;
+      border-radius:20px;color:#000;font-weight:700;font-size:15px;cursor:pointer}
+    button:hover{background:#1ed760}
+    .url-box{width:100%;padding:10px;background:#3e3e3e;border:1px solid #1DB954;
+      border-radius:4px;color:#1DB954;font-size:13px;word-break:break-all;margin-top:12px}
+    .hint{color:#b3b3b3;font-size:13px;margin-top:10px}
+    .err{color:#f15e6c;font-size:13px;margin-top:8px}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>🎵 Cover Image Upload</h2>
+    <p>Upload an image and paste the URL into Claude to set it as a playlist cover.</p>
+    ${url
+      ? `<div class="url-box">${url}</div>
+         <p class="hint">✅ Valid for 1 hour. Tell Claude:<br>
+         <em>"Set this as the cover for [playlist]: ${url}"</em></p>`
+      : `<form method="POST" action="/upload" enctype="multipart/form-data">
+           <input type="file" name="image" accept="image/*" required>
+           ${error ? `<div class="err">${error}</div>` : ""}
+           <button type="submit">Upload</button>
+         </form>`}
+  </div>
+</body>
+</html>`;
+
+app.get("/upload", (c) => c.html(UPLOAD_HTML()));
+
+app.post("/upload", async (c) => {
+  const body = await c.req.parseBody();
+  const file = body["image"];
+  if (!file || typeof file === "string") return c.html(UPLOAD_HTML("", "No image selected."), 400);
+  const buffer = Buffer.from(await (file as File).arrayBuffer());
+  if (buffer.length > 10 * 1024 * 1024) return c.html(UPLOAD_HTML("", "File too large (max 10 MB)."), 400);
+  const id = crypto.randomUUID();
+  tempImages.set(id, { data: buffer, mime: (file as File).type || "image/jpeg", expiresAt: Date.now() + 60 * 60 * 1000 });
+  const url = `${originOf(c.req.raw)}/i/${id}`;
+  return c.html(UPLOAD_HTML(url));
+});
+
+app.get("/i/:id", (c) => {
+  const img = tempImages.get(c.req.param("id"));
+  if (!img || img.expiresAt < Date.now()) return c.text("Not found or expired", 404);
+  return new Response(new Uint8Array(img.data), { headers: { "Content-Type": img.mime, "Cache-Control": "no-store" } });
+});
+
 // ── Health ───────────────────────────────────────────────────────────────────
 
 app.get("/health", (c) => c.json({ status: "ok", service: "spotify-mcp-server" }));
