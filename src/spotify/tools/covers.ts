@@ -198,7 +198,7 @@ export const coverTools = [
       // 1. Create playlist
       const me = await spotifyGet<{ id: string }>("/me");
       const playlist = await spotifyPost<{ id: string; name: string; snapshot_id: string }>(
-        `/users/${me.id}/playlists`,
+        `/me/playlists`,
         {
           name: input.name,
           description: input.description,
@@ -209,7 +209,7 @@ export const coverTools = [
 
       // 2. Add tracks
       if (input.track_uris && input.track_uris.length > 0) {
-        await spotifyPost(`/playlists/${playlist.id}/tracks`, {
+        await spotifyPost(`/playlists/${playlist.id}/items`, {
           uris: input.track_uris,
         });
       }

@@ -100,7 +100,7 @@ export const playlistTools = [
     }) {
       const me = await spotifyGet<{ id: string }>("/me");
       const data = await spotifyPost<Record<string, unknown>>(
-        `/users/${me.id}/playlists`,
+        `/me/playlists`,
         {
           name: input.name,
           description: input.description,
@@ -156,7 +156,7 @@ export const playlistTools = [
       const body: Record<string, unknown> = { uris: input.uris };
       if (input.position !== undefined) body.position = input.position;
       const data = await spotifyPost<{ snapshot_id: string }>(
-        `/playlists/${input.playlist_id}/tracks`,
+        `/playlists/${input.playlist_id}/items`,
         body
       );
       return { snapshot_id: data.snapshot_id };
@@ -177,10 +177,10 @@ export const playlistTools = [
       snapshot_id?: string;
     }) {
       const body: Record<string, unknown> = {
-        tracks: input.uris.map((uri) => ({ uri })),
+        items: input.uris.map((uri) => ({ uri })),
       };
       if (input.snapshot_id) body.snapshot_id = input.snapshot_id;
-      await spotifyDelete(`/playlists/${input.playlist_id}/tracks`, body);
+      await spotifyDelete(`/playlists/${input.playlist_id}/items`, body);
       return { success: true };
     },
   },
@@ -208,7 +208,7 @@ export const playlistTools = [
         range_length: input.range_length,
       };
       if (input.snapshot_id) body.snapshot_id = input.snapshot_id;
-      await spotifyPut(`/playlists/${input.playlist_id}/tracks`, body);
+      await spotifyPut(`/playlists/${input.playlist_id}/items`, body);
       return { success: true };
     },
   },
@@ -225,7 +225,7 @@ export const playlistTools = [
         .describe("New ordered list of track/episode URIs"),
     }),
     async handler(input: { playlist_id: string; uris: string[] }) {
-      await spotifyPut(`/playlists/${input.playlist_id}/tracks`, {
+      await spotifyPut(`/playlists/${input.playlist_id}/items`, {
         uris: input.uris,
       });
       return { success: true };
